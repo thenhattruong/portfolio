@@ -213,7 +213,7 @@
 
         const pageContent = {
             en: {
-                pageTitle: "Truong The Nhat - Personal Portfolio Resume Theme",
+                pageTitle: "Truong The Nhat - Portfolio",
                 profileRole: "Multimedia Design",
                 aboutTag: "About",
                 aboutIntroPrefix: "Hello! I'm",
@@ -328,7 +328,7 @@
                 ],
             },
             vi: {
-                pageTitle: "Truong The Nhat - Hồ sơ cá nhân",
+                pageTitle: "Truong The Nhat - Portfolio",
                 profileRole: "Thiết kế Đa phương tiện",
                 aboutTag: "Giới thiệu",
                 aboutIntroPrefix: "Xin chào! Tôi là",
@@ -2488,3 +2488,4 @@
         handleSidebar();
     });
 })(jQuery);
+
