@@ -3,6 +3,7 @@ gsap.registerPlugin(ScrollTrigger);
 (function ($) {
     let splitTextInstances = [];
     let splitTextTweens = [];
+    let aboutTitleRevealTween = null;
 
     const clearSplitTextAnimations = () => {
         splitTextTweens.forEach((tween) => {
@@ -20,7 +21,22 @@ gsap.registerPlugin(ScrollTrigger);
             }
         });
         splitTextInstances = [];
+
+        if (aboutTitleRevealTween) {
+            if (aboutTitleRevealTween.scrollTrigger) {
+                aboutTitleRevealTween.scrollTrigger.kill();
+            }
+            aboutTitleRevealTween.kill();
+            aboutTitleRevealTween = null;
+        }
     };
+
+    const playAboutTitleReveal = () => {
+        if (!aboutTitleRevealTween) return;
+        aboutTitleRevealTween.restart();
+    };
+
+    window.playAboutTitleReveal = playAboutTitleReveal;
 
     /* animation_text
   -------------------------------------------------------------------------*/
@@ -109,19 +125,26 @@ gsap.registerPlugin(ScrollTrigger);
                 } else if (hasClass("effect-blur-fade")) {
                     pxl_split.split({ type: "words" });
                     split_type_set = pxl_split.words;
+                    const isTestimonialFeedback =
+                        $el.is("p.text-body-2") &&
+                        $el.closest("#testimonial .testimonial-item").length > 0;
                     const tween = gsap.fromTo(
                         split_type_set,
-                        { opacity: 0, filter: "blur(10px)", y: 20 },
+                        {
+                            opacity: 0,
+                            filter: isTestimonialFeedback ? "blur(6px)" : "blur(10px)",
+                            y: isTestimonialFeedback ? 12 : 20,
+                        },
                         {
                             opacity: 1,
                             filter: "blur(0px)",
                             y: 0,
-                            duration: 1,
-                            stagger: 0.1,
+                            duration: isTestimonialFeedback ? 0.55 : 1,
+                            stagger: isTestimonialFeedback ? 0.045 : 0.1,
                             ease: "power3.out",
                             scrollTrigger: {
                                 trigger: $target,
-                                start: "top 86%",
+                                start: isTestimonialFeedback ? "top 92%" : "top 86%",
                                 toggleActions: "play none none reverse",
                             },
                         }
@@ -132,6 +155,87 @@ gsap.registerPlugin(ScrollTrigger);
                     splitTextTweens.push(tween);
                 }
             });
+        }
+
+        const aboutTitle = document.querySelector("#about .about-title-follow");
+        if (aboutTitle) {
+            const aboutTitleWords = aboutTitle.querySelectorAll(".about-title-word");
+            if (aboutTitleWords.length > 0) {
+                const prefersReducedMotion = window.matchMedia(
+                    "(prefers-reduced-motion: reduce)"
+                ).matches;
+
+                if (prefersReducedMotion) {
+                    aboutTitle.classList.remove("is-title-revealing", "is-flame-burst");
+                    gsap.set(aboutTitle, {
+                        clearProps: "transform,filter,textShadow,--about-title-glow",
+                    });
+                    gsap.set(aboutTitleWords, {
+                        clearProps: "transform,opacity,filter,textShadow,color,clipPath",
+                        opacity: 1,
+                        filter: "none",
+                    });
+                } else {
+                    gsap.set(aboutTitle, {
+                        perspective: 900,
+                        transformStyle: "preserve-3d",
+                        "--about-title-glow": 0,
+                    });
+                    gsap.set(aboutTitleWords, {
+                        clearProps: "color,textShadow",
+                    });
+                    gsap.set(aboutTitleWords, {
+                        autoAlpha: 0,
+                        y: 56,
+                        x: 0,
+                        rotationX: 0,
+                        rotationZ: 0,
+                        scale: 1,
+                        filter: "none",
+                        clipPath: "none",
+                        transformOrigin: "50% 100%",
+                    });
+
+                    aboutTitleRevealTween = gsap.timeline({
+                        paused: true,
+                        onStart: () => aboutTitle.classList.add("is-title-revealing"),
+                        onComplete: () => {
+                            aboutTitle.classList.remove(
+                                "is-title-revealing",
+                                "is-flame-burst"
+                            );
+                            gsap.set(aboutTitleWords, {
+                                clearProps: "color,textShadow",
+                            });
+                        },
+                    });
+
+                    aboutTitleRevealTween.to(aboutTitleWords, {
+                        autoAlpha: 1,
+                        y: 0,
+                        x: 0,
+                        rotationX: 0,
+                        rotationZ: 0,
+                        scale: 1,
+                        filter: "none",
+                        clipPath: "none",
+                        duration: 1,
+                        stagger: {
+                            each: 0.1,
+                            from: "start",
+                        },
+                        ease: "back.out(1.45)",
+                    });
+
+                    if (!document.body || !document.body.classList.contains("intro-locked")) {
+                        window.requestAnimationFrame(() => {
+                            if (aboutTitleRevealTween) {
+                                aboutTitleRevealTween.play(0);
+                            }
+                        });
+                    }
+                }
+            }
         }
     };
 

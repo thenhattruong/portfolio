@@ -16,6 +16,24 @@
 (function ($) {
     ("use strict");
 
+    const hasIntroSequence = () => Boolean(document.querySelector(".counter-scroll"));
+
+    const setIntroLockState = (isLocked) => {
+        if (!document.body || !hasIntroSequence()) return;
+
+        document.documentElement.classList.toggle("intro-locked", isLocked);
+        document.body.classList.toggle("intro-locked", isLocked);
+
+        if (isLocked) {
+            window.scrollTo(0, 0);
+        }
+    };
+
+    if (document.body && hasIntroSequence()) {
+        document.body.dataset.counterIntroReady = "false";
+        setIntroLockState(true);
+    }
+
     /* headerFixed
   -------------------------------------------------------------------------*/
     const headerFixed = () => {
@@ -281,6 +299,7 @@
                     "Unlimited Revisions",
                 ],
                 perHour: "/per hour",
+                hireMe: "Hire Me",
                 getStarted: "Get Started !",
                 partnerTag: "Partner",
                 partnerHeading: "Trusted By 50+ Brands Worldwide",
@@ -395,6 +414,7 @@
                     "Chỉnh sửa không giới hạn",
                 ],
                 perHour: "/giờ",
+                hireMe: "Thuê tôi",
                 getStarted: "Bắt đầu ngay!",
                 partnerTag: "Đối tác",
                 partnerHeading: "Được 50+ thương hiệu trên toàn cầu tin tưởng",
@@ -429,6 +449,14 @@
             if (element && typeof value === "string") {
                 element.textContent = value;
             }
+        };
+
+        const setTextAll = (selector, value) => {
+            if (typeof value !== "string") return;
+            const elements = document.querySelectorAll(selector);
+            elements.forEach((element) => {
+                element.textContent = value;
+            });
         };
 
         const setTextList = (selector, values) => {
@@ -491,38 +519,95 @@
             if (!title || title.dataset.mouseFollowReady === "true") return;
 
             let activeWord = null;
+            let frameId = 0;
+            let pointerX = 0;
+            let pointerY = 0;
+            let isPointerInside = false;
 
-            const resetWord = (word) => {
-                if (!word) return;
-                word.classList.remove("is-active");
-                word.style.transform = "translate3d(0, 0, 0)";
+            const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+            const animateActiveWord = () => {
+                frameId = 0;
+                if (!activeWord || !isPointerInside) return;
+
+                const rect = activeWord.getBoundingClientRect();
+                if (!rect.width || !rect.height) return;
+
+                const normalizedX = clamp(
+                    ((pointerX - rect.left) / rect.width) * 2 - 1,
+                    -1,
+                    1
+                );
+                const normalizedY = clamp(
+                    ((pointerY - rect.top) / rect.height) * 2 - 1,
+                    -1,
+                    1
+                );
+
+                const moveX = normalizedX * 10;
+                const moveY = normalizedY * 7;
+                const rotate = normalizedX * 6;
+
+                activeWord.style.transform = `translate3d(${moveX.toFixed(
+                    2
+                )}px, ${moveY.toFixed(2)}px, 0) rotate(${rotate.toFixed(2)}deg)`;
             };
 
-            const moveWord = (word, clientX, clientY) => {
-                const rect = word.getBoundingClientRect();
-                const deltaX = clientX - (rect.left + rect.width / 2);
-                const deltaY = clientY - (rect.top + rect.height / 2);
-                const offsetX = Math.max(-18, Math.min(18, deltaX * 0.18));
-                const offsetY = Math.max(-12, Math.min(12, deltaY * 0.18));
-
-                word.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0)`;
+            const scheduleWordAnimation = () => {
+                if (frameId) return;
+                frameId = window.requestAnimationFrame(animateActiveWord);
             };
+
+            const clearActiveWord = () => {
+                if (!activeWord) return;
+                const wordToRelease = activeWord;
+                wordToRelease.classList.remove("is-active");
+                wordToRelease.classList.add("is-releasing");
+                window.setTimeout(() => {
+                    wordToRelease.classList.remove("is-releasing");
+                    wordToRelease.style.removeProperty("transform");
+                    wordToRelease.style.removeProperty("text-shadow");
+                    wordToRelease.style.removeProperty("filter");
+                }, 420);
+
+                activeWord = null;
+            };
+
+            const setActiveWord = (nextWord) => {
+                if (activeWord === nextWord) return;
+                clearActiveWord();
+                if (!nextWord) return;
+
+                activeWord = nextWord;
+                activeWord.classList.remove("is-releasing");
+                activeWord.classList.add("is-active");
+                scheduleWordAnimation();
+            };
+
+            title.addEventListener("pointerover", (event) => {
+                const targetWord =
+                    event.target instanceof Element
+                        ? event.target.closest(".about-title-word")
+                        : null;
+                if (!targetWord || !title.contains(targetWord)) return;
+                setActiveWord(targetWord);
+            });
 
             title.addEventListener("pointermove", (event) => {
+                pointerX = event.clientX;
+                pointerY = event.clientY;
+                isPointerInside = true;
+
                 const targetWord =
                     event.target instanceof Element
                         ? event.target.closest(".about-title-word")
                         : null;
 
-                if (!targetWord || !title.contains(targetWord)) return;
-
-                if (activeWord && activeWord !== targetWord) {
-                    resetWord(activeWord);
+                if (targetWord && title.contains(targetWord)) {
+                    setActiveWord(targetWord);
                 }
 
-                activeWord = targetWord;
-                activeWord.classList.add("is-active");
-                moveWord(activeWord, event.clientX, event.clientY);
+                scheduleWordAnimation();
             });
 
             title.addEventListener("pointerout", (event) => {
@@ -530,33 +615,24 @@
                     event.target instanceof Element
                         ? event.target.closest(".about-title-word")
                         : null;
-
-                if (!fromWord || !title.contains(fromWord)) return;
-
                 const toWord =
                     event.relatedTarget instanceof Element
                         ? event.relatedTarget.closest(".about-title-word")
                         : null;
 
-                if (toWord && title.contains(toWord)) {
-                    if (fromWord !== toWord) {
-                        resetWord(fromWord);
+                if (fromWord && fromWord !== toWord) {
+                    if (activeWord === fromWord) {
+                        clearActiveWord();
+                    } else {
+                        fromWord.classList.remove("is-active");
+                        fromWord.style.removeProperty("transform");
                     }
-                    activeWord = toWord;
-                    activeWord.classList.add("is-active");
-                    return;
                 }
-
-                if (activeWord === fromWord) {
-                    activeWord = null;
-                }
-                resetWord(fromWord);
             });
 
             title.addEventListener("pointerleave", () => {
-                if (!activeWord) return;
-                resetWord(activeWord);
-                activeWord = null;
+                isPointerInside = false;
+                clearActiveWord();
             });
 
             title.dataset.mouseFollowReady = "true";
@@ -574,8 +650,11 @@
 
             setText(".header-sidebar .box .info h6.font-4.mb_4", profileName);
             setText(".user-bar .box-author .info .name", profileName);
-            setText(".header-sidebar .box .info .text-label", content.profileRole);
-            setText(".user-bar .box-author .info .text-label", content.profileRole);
+            setTextAll(
+                ".header-sidebar .box .info .text-label, .user-bar .box-author .info .text-label",
+                content.profileRole
+            );
+            setTextAll(".js-open-contact-modal [data-i18n='cta.hire_me']", content.hireMe);
 
             setText("#about .heading-section .tag-heading", content.aboutTag);
             renderAboutTitleWords(content.aboutTitle);
@@ -860,6 +939,7 @@
 
         $touchItems.each(function () {
             const $item = $(this);
+            const isPortfolioItem = $item.hasClass("portfolio-item");
             let touchTimer;
 
             const setTouchPoint = (clientX, clientY) => {
@@ -870,8 +950,39 @@
                 this.style.setProperty("--touch-y", `${y}px`);
             };
 
+            const setPortfolioTilt = (clientX, clientY) => {
+                if (!isPortfolioItem) return;
+                const rect = this.getBoundingClientRect();
+                if (!rect.width || !rect.height) return;
+                const relX = (clientX - rect.left) / rect.width;
+                const relY = (clientY - rect.top) / rect.height;
+                const clampedX = Math.min(Math.max(relX, 0), 1);
+                const clampedY = Math.min(Math.max(relY, 0), 1);
+                const maxTilt = 8;
+                const dirRaw = parseFloat(this.style.getPropertyValue("--portfolio-tilt-dir"));
+                const direction = Number.isFinite(dirRaw) && dirRaw !== 0 ? dirRaw : 1;
+                const horizontalStrength = Math.max(
+                    Math.abs(clampedX - 0.5) * 2,
+                    0.4
+                );
+                const tiltX = (0.5 - clampedY) * maxTilt * 1.5;
+                const tiltY = direction * horizontalStrength * maxTilt;
+
+                this.style.setProperty("--portfolio-tilt-x", `${tiltY.toFixed(2)}deg`);
+                this.style.setProperty("--portfolio-tilt-y", `${tiltX.toFixed(2)}deg`);
+                $item.addClass("is-tilt-active");
+            };
+
+            const resetPortfolioTilt = () => {
+                if (!isPortfolioItem) return;
+                this.style.setProperty("--portfolio-tilt-x", "0deg");
+                this.style.setProperty("--portfolio-tilt-y", "0deg");
+                $item.removeClass("is-tilt-active");
+            };
+
             $item.on("mousemove", function (e) {
                 setTouchPoint(e.clientX, e.clientY);
+                setPortfolioTilt(e.clientX, e.clientY);
             });
 
             $item.on("touchstart touchmove", function (e) {
@@ -880,63 +991,1253 @@
                 if (!touch) return;
 
                 setTouchPoint(touch.clientX, touch.clientY);
+                setPortfolioTilt(touch.clientX, touch.clientY);
                 $item.addClass("is-touch-active");
                 clearTimeout(touchTimer);
+            });
+
+            $item.on("mouseleave", function () {
+                resetPortfolioTilt();
             });
 
             $item.on("touchend touchcancel", function () {
                 clearTimeout(touchTimer);
                 touchTimer = setTimeout(() => {
                     $item.removeClass("is-touch-active");
+                    resetPortfolioTilt();
                 }, 220);
             });
         });
     };
 
-    /* handleUserBarGlowEffect
+    /* handleHeaderIntroSequence
   -------------------------------------------------------------------------*/
-    const handleUserBarGlowEffect = () => {
-        const $userBar = $(".main-content.style-fullwidth .user-bar.style-1");
-        if (!$userBar.length) return;
+    const handleHeaderIntroSequence = (options = {}) => {
+        return new Promise((resolve) => {
+            const onAvatarRollDone =
+                typeof options.onAvatarRollDone === "function"
+                    ? options.onAvatarRollDone
+                    : null;
+            const titleElement =
+                options.titleElement instanceof Element ? options.titleElement : null;
+            const headerSidebar = document.querySelector(
+                ".header .header-sidebar.style-1"
+            );
+            if (!headerSidebar || headerSidebar.dataset.introPlayed === "true") {
+                if (onAvatarRollDone) onAvatarRollDone();
+                resolve();
+                return;
+            }
 
-        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-            $userBar.addClass("is-intro-finished");
+            headerSidebar.dataset.introPlayed = "true";
+
+            const prefersReducedMotion = window.matchMedia(
+                "(prefers-reduced-motion: reduce)"
+            ).matches;
+            const hasGsap = typeof window.gsap !== "undefined";
+
+            const avatar = headerSidebar.querySelector(".box .avatar");
+            const info = headerSidebar.querySelector(".box .info");
+            const navItems = Array.from(
+                headerSidebar.querySelectorAll(".nav-menu.style-1 > li")
+            ).filter((item) => window.getComputedStyle(item).display !== "none");
+            const controls = headerSidebar.querySelector(".d-flex");
+            const revealTargets = [info, controls].filter(Boolean);
+
+            if (prefersReducedMotion || !hasGsap || !avatar) {
+                headerSidebar.classList.add("is-intro-finished");
+                if (onAvatarRollDone) onAvatarRollDone();
+                resolve();
+                return;
+            }
+
+            const collapsedClip = "inset(0 100% 0 0 round 160px)";
+            const expandedClip = "inset(0 0% 0 0 round 160px)";
+            const avatarRect = avatar.getBoundingClientRect();
+            const avatarRadius = avatarRect.height / 2;
+            const finalX = avatarRect.left + avatarRect.width / 2;
+            const finalY = avatarRect.top + avatarRect.height / 2;
+            const startY = -Math.max(window.innerHeight * 0.3, 260);
+            let impactX = window.innerWidth / 2;
+            let impactY = window.innerHeight / 2;
+
+            const resolveTitleImpact = () => {
+                if (!titleElement) {
+                    return {
+                        impactX: window.innerWidth / 2,
+                        impactY: window.innerHeight / 2,
+                    };
+                }
+
+                const titleBox =
+                    titleElement.querySelector(".intro-center-title__inner") || titleElement;
+                const titleRect = titleBox.getBoundingClientRect();
+                if (!titleRect.width || !titleRect.height) {
+                    return {
+                        impactX: window.innerWidth / 2,
+                        impactY: window.innerHeight / 2,
+                    };
+                }
+
+                const titleStyles = window.getComputedStyle(titleBox);
+                const borderTopWidth =
+                    parseFloat(titleStyles.borderTopWidth || "0") || 0;
+                const borderCenterY = titleRect.top + borderTopWidth * 0.5;
+                const titleCenterX = titleRect.left + titleRect.width / 2;
+
+                return {
+                    impactX: titleCenterX,
+                    // Bottom of the avatar touches the top border center of the title box.
+                    impactY: borderCenterY - avatarRadius,
+                };
+            };
+
+            const avatarGhost = avatar.cloneNode(true);
+            avatarGhost.classList.remove("avatar-final-flash");
+            avatarGhost.classList.add("header-avatar-ghost");
+            document.body.appendChild(avatarGhost);
+            avatarGhost.classList.add("is-rolling");
+
+            headerSidebar.classList.add("is-intro-animating");
+            avatar.classList.remove("avatar-final-flash");
+            avatar.style.visibility = "hidden";
+            let hasNotifiedAvatarRollDone = false;
+            const notifyAvatarRollDone = () => {
+                if (hasNotifiedAvatarRollDone) return;
+                hasNotifiedAvatarRollDone = true;
+                if (onAvatarRollDone) onAvatarRollDone();
+            };
+
+            window.gsap.set(headerSidebar, {
+                autoAlpha: 1,
+                clipPath: collapsedClip,
+            });
+            if (titleElement) {
+                window.gsap.set(titleElement, {
+                    autoAlpha: 1,
+                    left: window.innerWidth / 2,
+                    top: window.innerHeight / 2,
+                    x: 0,
+                    y: 0,
+                    filter: "blur(0px)",
+                });
+            }
+            const impactPoint = resolveTitleImpact();
+            impactX = impactPoint.impactX;
+            impactY = impactPoint.impactY;
+            let titleImpactDent = null;
+            if (titleElement) {
+                const titleInner =
+                    titleElement.querySelector(".intro-center-title__inner") || titleElement;
+                const titleChars = Array.from(
+                    titleElement.querySelectorAll(".intro-center-title__char:not(.is-space)")
+                );
+
+                if (titleInner && titleChars.length) {
+                    const titleRect = titleInner.getBoundingClientRect();
+                    const dentSigma = Math.max(titleRect.width * 0.16, 56);
+
+                    titleChars.forEach((char) => {
+                        const charRect = char.getBoundingClientRect();
+                        const charCenterX = charRect.left + charRect.width / 2;
+                        const dx = Math.abs(charCenterX - impactX);
+                        const influence = Math.exp(
+                            -(dx * dx) / (2 * dentSigma * dentSigma)
+                        );
+                        const isRoleLine = !!char.closest(
+                            ".intro-center-title__line--role"
+                        );
+                        const lineFactor = isRoleLine ? 0.56 : 1;
+                        const dentY = 4 + influence * 20 * lineFactor;
+                        const dentTilt =
+                            (charCenterX < impactX ? -1 : 1) *
+                            influence *
+                            8 *
+                            lineFactor;
+
+                        char.dataset.impactDentY = dentY.toFixed(3);
+                        char.dataset.impactDentTilt = dentTilt.toFixed(3);
+                    });
+
+                    titleImpactDent = {
+                        titleInner,
+                        titleChars,
+                    };
+                }
+            }
+            window.gsap.set(avatarGhost, {
+                autoAlpha: 1,
+                left: impactX,
+                top: startY,
+                xPercent: -50,
+                yPercent: -50,
+                rotation: 0,
+                scale: 0.9,
+                filter: "blur(0px)",
+                transformOrigin: "50% 50%",
+            });
+            window.gsap.set(navItems, {
+                autoAlpha: 0,
+                y: 18,
+                filter: "blur(4px)",
+            });
+            window.gsap.set(revealTargets, {
+                autoAlpha: 0,
+                y: 14,
+                filter: "blur(4px)",
+            });
+
+            const introTimeline = window.gsap.timeline({
+                defaults: { ease: "power3.out" },
+                onComplete: () => {
+                    notifyAvatarRollDone();
+                    headerSidebar.classList.remove("is-intro-animating");
+                    headerSidebar.classList.add("is-intro-finished");
+                    avatar.classList.remove("avatar-final-flash");
+                    avatar.style.visibility = "";
+                    avatarGhost.classList.remove("is-rolling");
+                    avatarGhost.remove();
+
+                    window.gsap.set(
+                        [headerSidebar, avatarGhost, ...navItems, ...revealTargets],
+                        {
+                            clearProps:
+                                "x,y,opacity,visibility,scale,filter,clipPath,rotation,transformOrigin,left,top,xPercent,yPercent",
+                        }
+                    );
+                    resolve();
+                },
+            });
+
+            if (titleImpactDent) {
+                const dentHits = [
+                    { time: 0.76, strength: 1, recover: 0.24 },
+                    { time: 1.28, strength: 0.72, recover: 0.2 },
+                    { time: 1.66, strength: 0.54, recover: 0.18 },
+                ];
+
+                dentHits.forEach((hit) => {
+                    const compressDuration = 0.1;
+                    const recoverStart = hit.time + compressDuration;
+
+                    introTimeline
+                        .to(
+                            titleImpactDent.titleInner,
+                            {
+                                y: 3.5 * hit.strength,
+                                scaleX: 1 + 0.015 * hit.strength,
+                                scaleY: 1 - 0.055 * hit.strength,
+                                duration: compressDuration,
+                                ease: "power2.out",
+                            },
+                            hit.time
+                        )
+                        .to(
+                            titleImpactDent.titleChars,
+                            {
+                                y: (_, el) =>
+                                    parseFloat(el.dataset.impactDentY || "0") *
+                                    hit.strength,
+                                rotation: (_, el) =>
+                                    parseFloat(
+                                        el.dataset.impactDentTilt || "0"
+                                    ) * hit.strength,
+                                duration: compressDuration,
+                                ease: "power2.out",
+                                stagger: {
+                                    each: 0.003,
+                                    from: "center",
+                                },
+                            },
+                            hit.time
+                        )
+                        .to(
+                            titleImpactDent.titleChars,
+                            {
+                                y: 0,
+                                rotation: 0,
+                                duration: hit.recover,
+                                ease: "power3.out",
+                                stagger: {
+                                    each: 0.003,
+                                    from: "center",
+                                },
+                            },
+                            recoverStart
+                        )
+                        .to(
+                            titleImpactDent.titleInner,
+                            {
+                                y: 0,
+                                scaleX: 1,
+                                scaleY: 1,
+                                duration: hit.recover,
+                                ease: "power3.out",
+                            },
+                            recoverStart
+                        );
+                });
+            }
+
+            introTimeline
+                .to(
+                    avatarGhost,
+                    {
+                        top: impactY,
+                        scaleX: 1.2,
+                        scaleY: 0.76,
+                        duration: 0.8,
+                        ease: "power2.in",
+                    },
+                    0
+                )
+                .to(
+                    avatarGhost,
+                    {
+                        top: impactY - 124,
+                        scaleX: 0.88,
+                        scaleY: 1.14,
+                        duration: 0.34,
+                        ease: "power2.out",
+                    },
+                    0.8
+                );
+
+            introTimeline
+                .to(
+                    avatarGhost,
+                    {
+                        top: impactY + 24,
+                        scaleX: 1.16,
+                        scaleY: 0.84,
+                        duration: 0.22,
+                        ease: "power2.inOut",
+                    },
+                    1.14
+                )
+                .to(
+                    avatarGhost,
+                    {
+                        top: impactY - 56,
+                        scaleX: 0.94,
+                        scaleY: 1.08,
+                        duration: 0.18,
+                        ease: "power2.out",
+                    },
+                    1.36
+                )
+                .to(
+                    avatarGhost,
+                    {
+                        top: impactY,
+                        scaleX: 1,
+                        scaleY: 1,
+                        duration: 0.14,
+                        ease: "power1.out",
+                    },
+                    1.54
+                )
+                .to(
+                    avatarGhost,
+                    {
+                        left: finalX,
+                        top: finalY - 74,
+                        rotation: -990,
+                        duration: 0.94,
+                        ease: "power2.inOut",
+                    },
+                    1.62
+                )
+                .to(
+                    avatarGhost,
+                    {
+                        top: finalY + 20,
+                        scaleX: 1.12,
+                        scaleY: 0.9,
+                        duration: 0.22,
+                        ease: "power2.in",
+                    },
+                    2.56
+                )
+                .to(
+                    avatarGhost,
+                    {
+                        top: finalY - 14,
+                        scaleX: 0.96,
+                        scaleY: 1.05,
+                        duration: 0.15,
+                        ease: "power1.out",
+                    },
+                    2.78
+                )
+                .to(
+                    avatarGhost,
+                    {
+                        top: finalY,
+                        scaleX: 1,
+                        scaleY: 1,
+                        rotation: -1080,
+                        duration: 0.16,
+                        ease: "power1.out",
+                    },
+                    2.93
+                );
+
+            introTimeline
+                .call(
+                    () => {
+                        notifyAvatarRollDone();
+                        avatarGhost.classList.remove("is-rolling");
+                    },
+                    null,
+                    3.11
+                )
+                .to(
+                    headerSidebar,
+                    {
+                        clipPath: expandedClip,
+                        duration: 1.18,
+                        ease: "power2.out",
+                    },
+                    3.15
+                )
+                .call(
+                    () => {
+                        avatar.classList.remove("avatar-final-flash");
+                        void avatar.offsetWidth;
+                        avatar.classList.add("avatar-final-flash");
+                    },
+                    null,
+                    3.17
+                )
+                .to(
+                    revealTargets,
+                    {
+                        autoAlpha: 1,
+                        y: 0,
+                        filter: "blur(0px)",
+                        duration: 0.46,
+                        stagger: 0.08,
+                    },
+                    3.41
+                )
+                .to(
+                    navItems,
+                    {
+                        autoAlpha: 1,
+                        y: 0,
+                        filter: "blur(0px)",
+                        duration: 0.52,
+                        stagger: 0.08,
+                    },
+                    3.45
+                );
+        });
+    };
+
+    /* handleFeaturedProjectReveal
+  -------------------------------------------------------------------------*/
+    const handleFeaturedProjectReveal = () => {
+        const section = document.querySelector("#portfolio");
+        const cardsWrap = section?.querySelector(".tabs-content-wrap");
+        const cards = cardsWrap
+            ? Array.from(cardsWrap.querySelectorAll(".portfolio-item"))
+            : [];
+
+        if (!section || !cardsWrap || !cards.length) return;
+
+        section.classList.remove("is-sequence-mode");
+        section.classList.remove("portfolio-reveal-complete");
+
+        const showCardsNormally = () => {
+            cards.forEach((card) => {
+                card.style.removeProperty("transform");
+                card.style.removeProperty("opacity");
+                card.style.removeProperty("visibility");
+            });
+        };
+
+        const prefersReducedMotion = window.matchMedia(
+            "(prefers-reduced-motion: reduce)"
+        ).matches;
+        const hasGsapScrollTrigger =
+            typeof window.gsap !== "undefined" &&
+            typeof window.ScrollTrigger !== "undefined";
+
+        if (prefersReducedMotion || !hasGsapScrollTrigger) {
+            showCardsNormally();
             return;
         }
 
-        $userBar.addClass("is-intro-animating");
+        const getCenterOffset = (card) => {
+            const wrapRect = cardsWrap.getBoundingClientRect();
+            const centerX = wrapRect.left + wrapRect.width / 2;
+            const centerY = wrapRect.top + wrapRect.height / 2;
 
-        const finishIntro = () => {
-            $userBar.removeClass("is-intro-animating").addClass("is-intro-finished");
+            const rect = card.getBoundingClientRect();
+            const cardCenterX = rect.left + rect.width / 2;
+            const cardCenterY = rect.top + rect.height / 2;
+
+            return {
+                x: centerX - cardCenterX,
+                y: centerY - cardCenterY + 24,
+            };
         };
 
-        $userBar.one("animationend", function (e) {
-            if (
-                e.originalEvent &&
-                e.originalEvent.animationName !== "user-bar-reveal"
-            ) {
+        cards.forEach((card) => {
+            window.gsap.set(card, { autoAlpha: 0 });
+        });
+
+        cards.forEach((card, index) => {
+            const tiltDir = index % 2 === 0 ? 1 : -1;
+            card.style.setProperty("--portfolio-tilt-dir", `${tiltDir}`);
+        });
+
+        const timeline = window.gsap.timeline({
+            defaults: { ease: "none" },
+        });
+        const revealOffsets = [0, 0.22, 0.52, 0.84];
+        const revealDurations = [0.56, 0.58, 0.62, 0.66];
+
+        cards.forEach((card, index) => {
+            const dir = index % 2 === 0 ? -1 : 1;
+            const img = card.querySelector(".img-style img");
+            const tag = card.querySelector(".tag");
+            const title = card.querySelector(".title");
+            const imgWrap = card.querySelector(".img-style");
+            let beam = null;
+
+            if (imgWrap) {
+                beam = imgWrap.querySelector(".project-reveal-beam");
+                if (!beam) {
+                    beam = document.createElement("span");
+                    beam.className = "project-reveal-beam";
+                    imgWrap.appendChild(beam);
+                }
+                window.gsap.set(beam, { autoAlpha: 0, xPercent: -150 });
+            }
+
+            const revealAt =
+                revealOffsets[index] ??
+                revealOffsets[revealOffsets.length - 1] +
+                    (index - revealOffsets.length + 1) * 0.64;
+            const revealDuration =
+                revealDurations[index] ?? revealDurations[revealDurations.length - 1];
+
+            timeline.fromTo(
+                card,
+                {
+                    x: () => getCenterOffset(card).x,
+                    y: () => getCenterOffset(card).y,
+                    autoAlpha: 0,
+                    scale: 0.82,
+                    rotation: dir * 10,
+                    skewX: dir * 5,
+                    filter: "blur(14px) saturate(0.55)",
+                },
+                {
+                    x: 0,
+                    y: 0,
+                    autoAlpha: 1,
+                    scale: 1,
+                    rotation: 0,
+                    skewX: 0,
+                    filter: "blur(0px) saturate(1)",
+                    duration: revealDuration,
+                    immediateRender: false,
+                },
+                revealAt
+            );
+
+            if (img) {
+                timeline.fromTo(
+                    img,
+                    {
+                        scale: 1.24,
+                        rotation: dir * 2.4,
+                        filter: "brightness(0.72) saturate(0.7)",
+                    },
+                    {
+                        scale: 1.04,
+                        rotation: 0,
+                        filter: "brightness(1) saturate(1)",
+                        duration: revealDuration * 0.9,
+                        immediateRender: false,
+                    },
+                    revealAt + 0.03
+                );
+            }
+
+            if (tag) {
+                timeline.fromTo(
+                    tag,
+                    { y: 28, autoAlpha: 0 },
+                    {
+                        y: 0,
+                        autoAlpha: 1,
+                        duration: revealDuration * 0.6,
+                        immediateRender: false,
+                    },
+                    revealAt + 0.12
+                );
+            }
+
+            if (title) {
+                timeline.fromTo(
+                    title,
+                    { y: 24, autoAlpha: 0 },
+                    {
+                        y: 0,
+                        autoAlpha: 1,
+                        duration: revealDuration * 0.62,
+                        immediateRender: false,
+                    },
+                    revealAt + 0.17
+                );
+            }
+
+            if (beam) {
+                const beamStart = revealAt + revealDuration * 0.35;
+                timeline.fromTo(
+                    beam,
+                    { xPercent: -150, autoAlpha: 0 },
+                    {
+                        xPercent: 150,
+                        autoAlpha: 0.85,
+                        duration: revealDuration * 0.45,
+                        immediateRender: false,
+                    },
+                    beamStart
+                );
+                timeline.to(
+                    beam,
+                    {
+                        autoAlpha: 0,
+                        duration: revealDuration * 0.2,
+                    },
+                    beamStart + revealDuration * 0.28
+                );
+            }
+        });
+
+        let hasLockedFinalState = false;
+        window.ScrollTrigger.create({
+            trigger: section,
+            start: "top 62%",
+            end: `+=${cards.length * 240}`,
+            scrub: 0.45,
+            animation: timeline,
+            invalidateOnRefresh: true,
+            onUpdate: (self) => {
+                if (self.progress >= 0.995) {
+                    section.classList.add("portfolio-reveal-complete");
+                }
+            },
+            onLeave: (self) => {
+                if (hasLockedFinalState) return;
+                hasLockedFinalState = true;
+                section.classList.add("portfolio-reveal-complete");
+                timeline.progress(1);
+                window.gsap.set(cards, {
+                    clearProps: "transform,opacity,visibility,filter",
+                });
+                window.gsap.set(
+                    cards.map((card) => card.querySelector(".img-style img")).filter(Boolean),
+                    {
+                        clearProps: "transform,filter",
+                    }
+                );
+                window.gsap.set(
+                    cards.flatMap((card) =>
+                        Array.from(
+                            card.querySelectorAll(".tag, .title, .project-reveal-beam")
+                        )
+                    ),
+                    {
+                        clearProps: "transform,opacity,visibility",
+                    }
+                );
+                self.kill(false);
+            },
+        });
+
+        window.ScrollTrigger.refresh();
+    };
+
+    /* handleUserBarGlowEffect
+  -------------------------------------------------------------------------*/
+    const handleUserBarGlowEffect = () => {
+        return new Promise((resolve) => {
+            const $userBar = $(".main-content.style-fullwidth .user-bar.style-1");
+            if (!$userBar.length) {
+                resolve();
                 return;
             }
-            finishIntro();
-        });
 
-        setTimeout(() => {
-            if (!$userBar.hasClass("is-intro-finished")) {
-                finishIntro();
+            if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+                $userBar.removeClass("is-intro-animating").addClass("is-intro-finished");
+                resolve();
+                return;
             }
-        }, 1650);
 
-        let touchTimer;
-        $userBar.on("touchstart touchmove", function () {
-            $userBar.addClass("is-touch-active");
-            clearTimeout(touchTimer);
+            let hasResolved = false;
+            const finishIntro = () => {
+                if (hasResolved) return;
+                hasResolved = true;
+                $userBar.removeClass("is-intro-animating").addClass("is-intro-finished");
+                resolve();
+            };
+
+            $userBar.removeClass("is-intro-finished").addClass("is-intro-animating");
+
+            $userBar
+                .off("animationend.handleUserBarIntro")
+                .one("animationend.handleUserBarIntro", function (e) {
+                    if (
+                        e.originalEvent &&
+                        e.originalEvent.animationName !== "user-bar-reveal"
+                    ) {
+                        return;
+                    }
+                    finishIntro();
+                });
+
+            setTimeout(finishIntro, 1650);
+
+            if (!$userBar.data("touchGlowBound")) {
+                let touchTimer;
+                $userBar.on("touchstart touchmove", function () {
+                    $userBar.addClass("is-touch-active");
+                    clearTimeout(touchTimer);
+                });
+                $userBar.on("touchend touchcancel", function () {
+                    clearTimeout(touchTimer);
+                    touchTimer = setTimeout(() => {
+                        $userBar.removeClass("is-touch-active");
+                    }, 220);
+                });
+                $userBar.data("touchGlowBound", "true");
+            }
         });
-        $userBar.on("touchend touchcancel", function () {
-            clearTimeout(touchTimer);
-            touchTimer = setTimeout(() => {
-                $userBar.removeClass("is-touch-active");
-            }, 220);
+    };
+
+    /* handleAboutIntroSequence
+  -------------------------------------------------------------------------*/
+    const handleAboutIntroSequence = () => {
+        return new Promise((resolve) => {
+            const aboutSection = document.querySelector("#about");
+            if (!aboutSection) {
+                resolve();
+                return;
+            }
+
+            const aboutTargets = Array.from(aboutSection.children);
+            if (!aboutTargets.length) {
+                resolve();
+                return;
+            }
+
+            const aboutTitleTarget = aboutSection.querySelector(".about-title-follow");
+            const aboutTitleWrap = aboutTitleTarget
+                ? aboutTitleTarget.closest(".heading-section")
+                : null;
+            const orderedAboutTargets = aboutTargets.filter(
+                (target) => target !== aboutTitleWrap
+            );
+
+            const prefersReducedMotion = window.matchMedia(
+                "(prefers-reduced-motion: reduce)"
+            ).matches;
+            const hasGsap = typeof window.gsap !== "undefined";
+
+            if (prefersReducedMotion || !hasGsap) {
+                aboutSection.classList.add("is-intro-finished");
+                if (aboutTitleWrap) {
+                    aboutTitleWrap.style.removeProperty("opacity");
+                    aboutTitleWrap.style.removeProperty("visibility");
+                    aboutTitleWrap.style.removeProperty("transform");
+                    aboutTitleWrap.style.removeProperty("filter");
+                }
+                orderedAboutTargets.forEach((target) => {
+                    target.style.removeProperty("opacity");
+                    target.style.removeProperty("visibility");
+                    target.style.removeProperty("transform");
+                    target.style.removeProperty("filter");
+                });
+                resolve();
+                return;
+            }
+
+            window.gsap.to(orderedAboutTargets, {
+                autoAlpha: 1,
+                y: 0,
+                filter: "blur(0px)",
+                duration: 0.5,
+                stagger: 0.09,
+                ease: "power3.out",
+                onStart: () => {
+                    if (aboutTitleWrap) {
+                        window.gsap.set(aboutTitleWrap, {
+                            autoAlpha: 1,
+                            y: 0,
+                            filter: "blur(0px)",
+                        });
+                    }
+                    if (typeof window.playAboutTitleReveal === "function") {
+                        window.playAboutTitleReveal();
+                    }
+                },
+                onComplete: () => {
+                    if (aboutTitleWrap) {
+                        window.gsap.set(aboutTitleWrap, {
+                            clearProps: "opacity,visibility,transform,filter",
+                        });
+                    }
+                    window.gsap.set(orderedAboutTargets, {
+                        clearProps: "opacity,visibility,transform,filter",
+                    });
+                    aboutSection.classList.add("is-intro-finished");
+                    resolve();
+                },
+            });
         });
+    };
+
+    /* handleCenterIntroTitle
+  -------------------------------------------------------------------------*/
+    const handleCenterIntroTitle = () => {
+        let title = document.querySelector(".intro-center-title");
+        if (title) return title;
+
+        const createCharSpans = (text) => {
+            const fragment = document.createDocumentFragment();
+            Array.from(text).forEach((char) => {
+                const span = document.createElement("span");
+                span.className = "intro-center-title__char";
+                if (char === " ") {
+                    span.classList.add("is-space");
+                    span.textContent = "\u00A0";
+                } else {
+                    span.textContent = char;
+                }
+                fragment.appendChild(span);
+            });
+            return fragment;
+        };
+
+        title = document.createElement("div");
+        title.className = "intro-center-title";
+
+        const inner = document.createElement("div");
+        inner.className = "intro-center-title__inner";
+
+        const nameLine = document.createElement("div");
+        nameLine.className = "intro-center-title__line intro-center-title__line--name";
+        nameLine.appendChild(createCharSpans("TRUONG THE NHAT"));
+
+        const roleLine = document.createElement("div");
+        roleLine.className = "intro-center-title__line intro-center-title__line--role";
+        roleLine.appendChild(createCharSpans("PORTFOLIO"));
+
+        inner.appendChild(nameLine);
+        inner.appendChild(roleLine);
+        title.appendChild(inner);
+        document.body.appendChild(title);
+        return title;
+    };
+
+    /* runOrderedIntroSequence
+  -------------------------------------------------------------------------*/
+    const runOrderedIntroSequence = async () => {
+        const setCounterIntroReady = (isReady) => {
+            if (!document.body || !document.querySelector(".counter-scroll")) {
+                return;
+            }
+            document.body.dataset.counterIntroReady = isReady ? "true" : "false";
+        };
+
+        if (!hasIntroSequence()) return;
+
+        setIntroLockState(true);
+        setCounterIntroReady(false);
+
+        try {
+            const prefersReducedMotion = window.matchMedia(
+                "(prefers-reduced-motion: reduce)"
+            ).matches;
+            const hasGsap = typeof window.gsap !== "undefined";
+            const userBar = document.querySelector(
+                ".main-content.style-fullwidth .user-bar.style-1"
+            );
+            const aboutSection = document.querySelector("#about");
+            const aboutTargets = aboutSection ? Array.from(aboutSection.children) : [];
+            const centerIntroTitle = handleCenterIntroTitle();
+            const replayAboutCounters = () => {
+                const counterItems = Array.from(
+                    document.querySelectorAll("#about .counter-item")
+                );
+                if (!counterItems.length) return;
+
+                if (typeof window.resetCountersToZero === "function") {
+                    window.resetCountersToZero();
+                } else {
+                    counterItems.forEach((item) => {
+                        item.classList.remove("counted");
+
+                        const odometerEl = item.querySelector(".odometer");
+                        if (!odometerEl) return;
+
+                        if (
+                            odometerEl.odometer &&
+                            typeof odometerEl.odometer.update === "function"
+                        ) {
+                            odometerEl.odometer.update(0);
+                        } else {
+                            odometerEl.textContent = "0";
+                        }
+                    });
+                }
+
+                if (typeof window.checkCounters === "function") {
+                    window.requestAnimationFrame(() => {
+                        window.checkCounters();
+                    });
+                }
+            };
+            let userBarIntroPromise = null;
+            let userBarVisiblePromise = Promise.resolve();
+            const prepareUserBarNameFill = (nameElement) => {
+            if (!(nameElement instanceof Element)) {
+                return { allChars: [], solidChars: [] };
+            }
+
+            let sourceText = nameElement.dataset.fillSourceText;
+            if (!sourceText) {
+                sourceText = (nameElement.textContent || "").trim();
+                nameElement.dataset.fillSourceText = sourceText;
+            }
+
+            const existingChars = nameElement.querySelectorAll(
+                ".userbar-name-fill__char"
+            );
+            if (!existingChars.length) {
+                const wrap = document.createElement("span");
+                wrap.className = "userbar-name-fill";
+
+                Array.from(sourceText).forEach((char) => {
+                    const charSpan = document.createElement("span");
+                    charSpan.className = "userbar-name-fill__char";
+                    if (char === " ") {
+                        charSpan.classList.add("is-space");
+                        charSpan.textContent = "\u00A0";
+                    } else {
+                        charSpan.textContent = char;
+                    }
+                    wrap.appendChild(charSpan);
+                });
+
+                nameElement.textContent = "";
+                nameElement.appendChild(wrap);
+            }
+
+            const allChars = Array.from(
+                nameElement.querySelectorAll(".userbar-name-fill__char")
+            );
+            const solidChars = allChars.filter(
+                (charElement) => !charElement.classList.contains("is-space")
+            );
+            return { allChars, solidChars };
+        };
+
+        const startUserBarIntro = () => {
+            if (userBarIntroPromise) return userBarIntroPromise;
+
+            if (hasGsap && !prefersReducedMotion) {
+                userBarVisiblePromise = new Promise((resolveVisible) => {
+                    const introTimeline = window.gsap.timeline();
+                    const userBarName = document.querySelector(
+                        ".main-content.style-fullwidth .user-bar.style-1 .box-author .name, .main-content.style-fullwidth .user-bar.style-1 .box-author .info .name"
+                    );
+                    const preparedUserBarName = prepareUserBarNameFill(userBarName);
+                    const userBarNameChars = preparedUserBarName.solidChars;
+
+                    if (userBar) {
+                        introTimeline.to(
+                            userBar,
+                            {
+                                autoAlpha: 1,
+                                duration: 0.22,
+                                ease: "power2.out",
+                                onComplete: resolveVisible,
+                            },
+                            0
+                        );
+                    } else {
+                        resolveVisible();
+                    }
+
+                    if (userBarNameChars.length) {
+                        window.gsap.set(userBarNameChars, {
+                            autoAlpha: 0.14,
+                            y: 12,
+                            scale: 0.82,
+                            filter: "blur(8px)",
+                        });
+                        introTimeline.to(
+                            userBarNameChars,
+                            {
+                                autoAlpha: 0.32,
+                                y: 7,
+                                scale: 0.9,
+                                filter: "blur(4px)",
+                                duration: 0.2,
+                                ease: "power2.out",
+                                stagger: {
+                                    each: 0.014,
+                                    from: "start",
+                                },
+                            },
+                            0.03
+                        );
+                    }
+
+                    if (centerIntroTitle) {
+                        const titleInner =
+                            centerIntroTitle.querySelector(
+                                ".intro-center-title__inner"
+                            ) || centerIntroTitle;
+                        const titleChars = Array.from(
+                            centerIntroTitle.querySelectorAll(
+                                ".intro-center-title__char:not(.is-space)"
+                            )
+                        );
+
+                        if (userBarName && userBarNameChars.length && titleChars.length && titleInner) {
+                            const targetRect = userBarName.getBoundingClientRect();
+                            const targetX = targetRect.left + targetRect.width / 2;
+                            const targetY = targetRect.top + targetRect.height / 2;
+                            const innerRect = titleInner.getBoundingClientRect();
+                            const innerX = innerRect.left + innerRect.width / 2;
+                            const innerY = innerRect.top + innerRect.height / 2;
+                            const innerDx = targetX - innerX;
+                            const innerDy = targetY - innerY;
+                            const targetSlots = userBarNameChars.length;
+                            const titleCount = Math.max(titleChars.length - 1, 1);
+
+                            titleChars.forEach((char, index) => {
+                                const rect = char.getBoundingClientRect();
+                                const charX = rect.left + rect.width / 2;
+                                const charY = rect.top + rect.height / 2;
+                                const slotIndex = Math.round(
+                                    (index / titleCount) * (targetSlots - 1)
+                                );
+                                const targetChar = userBarNameChars[slotIndex];
+                                const targetCharRect =
+                                    targetChar.getBoundingClientRect();
+                                const slotX =
+                                    targetCharRect.left + targetCharRect.width / 2;
+                                const slotY =
+                                    targetCharRect.top + targetCharRect.height / 2;
+
+                                char.dataset.suckDx = (slotX - charX).toFixed(3);
+                                char.dataset.suckDy = (slotY - charY).toFixed(3);
+                                char.dataset.suckScale = (
+                                    0.08 + (slotIndex % 3) * 0.018
+                                ).toFixed(3);
+                                char.dataset.suckRotate = (
+                                    (slotIndex % 2 === 0 ? -1 : 1) * (8 + (index % 4) * 2)
+                                ).toFixed(2);
+                            });
+
+                            introTimeline.to(
+                                titleChars,
+                                {
+                                    y: (index) => -10 - (index % 4) * 2.5,
+                                    rotation: (index) => (index % 2 === 0 ? -10 : 10),
+                                    scale: 1.05,
+                                    duration: 0.16,
+                                    ease: "power2.out",
+                                    stagger: {
+                                        each: 0.009,
+                                        from: "center",
+                                    },
+                                },
+                                0.04
+                            );
+
+                            introTimeline.to(
+                                titleInner,
+                                {
+                                    x: innerDx * 0.2,
+                                    y: innerDy * 0.2,
+                                    scaleX: 0.95,
+                                    scaleY: 0.91,
+                                    filter: "blur(0.8px)",
+                                    duration: 0.22,
+                                    ease: "power2.out",
+                                },
+                                0.12
+                            );
+
+                            introTimeline.to(
+                                titleChars,
+                                {
+                                    x: (_, el) =>
+                                        parseFloat(el.dataset.suckDx || "0"),
+                                    y: (_, el) =>
+                                        parseFloat(el.dataset.suckDy || "0"),
+                                    scale: (_, el) =>
+                                        parseFloat(el.dataset.suckScale || "0.1"),
+                                    rotation: (_, el) =>
+                                        parseFloat(el.dataset.suckRotate || "0"),
+                                    autoAlpha: 0,
+                                    filter: "blur(10px)",
+                                    duration: 0.64,
+                                    ease: "power4.in",
+                                    stagger: {
+                                        each: 0.014,
+                                        from: "start",
+                                    },
+                                },
+                                0.2
+                            );
+
+                            introTimeline.to(
+                                userBarNameChars,
+                                {
+                                    autoAlpha: 1,
+                                    y: 0,
+                                    scale: 1,
+                                    filter: "blur(0px)",
+                                    duration: 0.28,
+                                    ease: "back.out(1.8)",
+                                    stagger: {
+                                        each: 0.03,
+                                        from: "start",
+                                    },
+                                },
+                                0.34
+                            );
+
+                            introTimeline.call(
+                                () => {
+                                    userBarName.classList.add("is-fill-hit");
+                                },
+                                null,
+                                0.48
+                            );
+                            introTimeline.to(
+                                userBarNameChars,
+                                {
+                                    textShadow:
+                                        "0 0 16px rgba(69, 231, 123, 0.72), 0 0 28px rgba(69, 231, 123, 0.34)",
+                                    duration: 0.22,
+                                    ease: "power2.out",
+                                    yoyo: true,
+                                    repeat: 1,
+                                    stagger: {
+                                        each: 0.028,
+                                        from: "start",
+                                    },
+                                },
+                                0.44
+                            );
+                            introTimeline.call(
+                                () => {
+                                    userBarName.classList.remove("is-fill-hit");
+                                    window.gsap.set(userBarNameChars, {
+                                        clearProps:
+                                            "opacity,visibility,transform,filter,textShadow",
+                                    });
+                                    window.gsap.set(userBarName, {
+                                        clearProps:
+                                            "opacity,visibility,transform,filter,letterSpacing,textShadow",
+                                    });
+                                },
+                                null,
+                                1.22
+                            );
+                        } else {
+                            introTimeline.to(
+                                centerIntroTitle,
+                                {
+                                    autoAlpha: 0,
+                                    y: -10,
+                                    filter: "blur(8px)",
+                                    duration: 0.4,
+                                    ease: "power2.out",
+                                },
+                                0.24
+                            );
+                        }
+
+                        introTimeline.to(
+                            centerIntroTitle,
+                            {
+                                autoAlpha: 0,
+                                duration: 0.12,
+                                ease: "power1.out",
+                                onComplete: () => {
+                                    centerIntroTitle.remove();
+                                },
+                            },
+                            1.12
+                        );
+                    }
+                });
+            } else {
+                if (centerIntroTitle) {
+                    centerIntroTitle.remove();
+                }
+                userBarVisiblePromise = Promise.resolve();
+            }
+
+            userBarIntroPromise = handleUserBarGlowEffect();
+            return userBarIntroPromise;
+        };
+
+        if (hasGsap && !prefersReducedMotion) {
+            if (centerIntroTitle) {
+                window.gsap.set(centerIntroTitle, {
+                    autoAlpha: 1,
+                    left: window.innerWidth / 2,
+                    top: window.innerHeight / 2,
+                    y: 0,
+                    filter: "blur(0px)",
+                });
+            }
+            if (userBar) {
+                window.gsap.set(userBar, { autoAlpha: 0 });
+            }
+            if (aboutTargets.length) {
+                window.gsap.set(aboutTargets, {
+                    autoAlpha: 0,
+                    y: 24,
+                    filter: "blur(8px)",
+                });
+            }
+        } else if (centerIntroTitle) {
+            centerIntroTitle.remove();
+        }
+
+            await handleHeaderIntroSequence({
+                onAvatarRollDone: startUserBarIntro,
+                titleElement: centerIntroTitle,
+            });
+
+            if (!userBarIntroPromise) {
+                startUserBarIntro();
+            }
+
+            await userBarVisiblePromise;
+            await handleAboutIntroSequence();
+            setCounterIntroReady(true);
+            replayAboutCounters();
+            await userBarIntroPromise;
+        } finally {
+            setCounterIntroReady(true);
+            setIntroLockState(false);
+        }
     };
 
     /* handleQuickContactGlowEffect
@@ -1000,6 +2301,122 @@
         }
     };
 
+    /* handleContactModal
+  -------------------------------------------------------------------------*/
+    const handleContactModal = () => {
+        const $modal = $("#contact-modal");
+        const $wrapper = $("#wrapper");
+        const $openButtons = $(".js-open-contact-modal");
+        const $sourceForm = $("#contact .form-contact").first();
+        const $modalContent = $modal.find(".contact-modal__content");
+        if (
+            !$modal.length ||
+            !$openButtons.length ||
+            !$sourceForm.length ||
+            !$modalContent.length
+        ) {
+            return;
+        }
+
+        if ($wrapper.length && !$wrapper.find("#contact-modal").length) {
+            $wrapper.append($modal);
+        }
+
+        const $body = $("body");
+        let lastFocusedElement = null;
+
+        const buildModalForm = () => {
+            const $clonedForm = $sourceForm.clone(false, false);
+            const sourceElement = $sourceForm.get(0);
+            const clonedElement = $clonedForm.get(0);
+
+            $clonedForm.find("#name").attr("id", "modal-name");
+            $clonedForm.find("#email").attr("id", "modal-email");
+            $clonedForm.find("#message").attr("id", "modal-message");
+            $clonedForm.find(".item-shape").hide();
+
+            if (sourceElement && clonedElement) {
+                const computedStyle = window.getComputedStyle(sourceElement);
+                clonedElement.style.background = computedStyle.background;
+                clonedElement.style.borderTopColor = computedStyle.borderTopColor;
+                clonedElement.style.borderTopStyle = computedStyle.borderTopStyle;
+                clonedElement.style.borderTopWidth = computedStyle.borderTopWidth;
+
+                [
+                    "--Bg-linear-2",
+                    "--Text-light",
+                    "--Text-secondary",
+                    "--Text-primary",
+                    "--Bg-dark",
+                ].forEach((cssVar) => {
+                    const value = computedStyle.getPropertyValue(cssVar);
+                    if (value) {
+                        clonedElement.style.setProperty(cssVar, value.trim());
+                    }
+                });
+            }
+
+            $modalContent.empty().append($clonedForm);
+        };
+
+        const openModal = () => {
+            buildModalForm();
+            lastFocusedElement = document.activeElement;
+            $modal.addClass("is-open").attr("aria-hidden", "false");
+            $body.addClass("contact-modal-open");
+
+            const $focusTarget = $modal
+                .find("input, textarea")
+                .filter(":visible")
+                .first();
+            const $fallbackTarget = $modal
+                .find("button")
+                .filter(":visible")
+                .first();
+            const $targetToFocus = $focusTarget.length
+                ? $focusTarget
+                : $fallbackTarget;
+
+            if ($targetToFocus.length) {
+                setTimeout(() => {
+                    $targetToFocus.trigger("focus");
+                }, 50);
+            }
+        };
+
+        const closeModal = () => {
+            if (!$modal.hasClass("is-open")) return;
+
+            $modal.removeClass("is-open").attr("aria-hidden", "true");
+            $body.removeClass("contact-modal-open");
+
+            if (
+                lastFocusedElement &&
+                typeof lastFocusedElement.focus === "function"
+            ) {
+                lastFocusedElement.focus();
+            }
+        };
+
+        $openButtons.on("click", function (e) {
+            e.preventDefault();
+            openModal();
+        });
+
+        $modal.on("click", "[data-close-contact-modal]", function (e) {
+            e.preventDefault();
+            closeModal();
+        });
+
+        $(document)
+            .off("keydown.handleContactModal")
+            .on("keydown.handleContactModal", function (e) {
+                if (e.key === "Escape") {
+                    closeModal();
+                }
+            });
+    };
+
         /* handleSidebar
     -------------------------------------------------------------------------------------*/
         const handleSidebar = () => {
@@ -1059,11 +2476,15 @@
         oneNavOnePage();
         handleEffectSpotlight();
         handleCounterTouchEffect();
-        handleUserBarGlowEffect();
+        handleFeaturedProjectReveal();
         handleQuickContactGlowEffect();
         handlePartnerLogoMask();
         preventDefault();
         spliting();
+        runOrderedIntroSequence().catch((error) => {
+            console.error("runOrderedIntroSequence failed:", error);
+        });
+        handleContactModal();
         handleSidebar();
     });
 })(jQuery);
