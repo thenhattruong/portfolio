@@ -5796,8 +5796,8 @@ ANIMATION AREA CSS
 .contact-modal__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.84);
+  backdrop-filter: blur(12px);
 }
 .contact-modal__dialog {
   position: relative;
@@ -5860,8 +5860,8 @@ body.contact-modal-open {
 .email-popup__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(5px);
+  background: rgba(0, 0, 0, 0.84);
+  backdrop-filter: blur(12px);
 }
 .email-popup__dialog {
   position: relative;
@@ -5940,6 +5940,16 @@ body.contact-modal-open {
 }
 body.email-popup-open {
   overflow: hidden;
+}
+
+/* Featured Projects popup overlay */
+.fancybox-bg {
+  background: rgba(0, 0, 0, 0.84);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.fancybox-is-open .fancybox-bg {
+  opacity: 1;
 }
 @media (max-width: 767px) {
   .contact-modal {

@@ -34,6 +34,80 @@
         setIntroLockState(true);
     }
 
+    const forceBackToHomeOnReload = () => {
+        if (!document.querySelector(".section-onepage")) return;
+
+        if ("scrollRestoration" in window.history) {
+            window.history.scrollRestoration = "manual";
+        }
+
+        const navEntries =
+            typeof performance.getEntriesByType === "function"
+                ? performance.getEntriesByType("navigation")
+                : [];
+        const navType = navEntries.length ? navEntries[0].type : "";
+        const legacyNavType =
+            performance.navigation &&
+            typeof performance.navigation.type === "number"
+                ? performance.navigation.type
+                : -1;
+        const isReloadNavigation =
+            navType === "reload" || legacyNavType === 1;
+
+        const resetToHome = () => {
+            window.scrollTo(0, 0);
+
+            if (window.location.hash) {
+                window.history.replaceState(
+                    null,
+                    document.title,
+                    window.location.pathname + window.location.search
+                );
+            }
+        };
+
+        const forceTopRepeatedly = () => {
+            let frameCount = 0;
+            const maxFrames = 24;
+
+            const tick = () => {
+                resetToHome();
+                frameCount += 1;
+                if (frameCount < maxFrames) {
+                    window.requestAnimationFrame(tick);
+                }
+            };
+
+            tick();
+            window.setTimeout(resetToHome, 120);
+            window.setTimeout(resetToHome, 320);
+            window.setTimeout(resetToHome, 650);
+        };
+
+        window.addEventListener("beforeunload", function () {
+            window.scrollTo(0, 0);
+        });
+
+        window.addEventListener("load", function () {
+            if (isReloadNavigation) {
+                forceTopRepeatedly();
+            } else {
+                resetToHome();
+            }
+        });
+        window.addEventListener("pageshow", function (event) {
+            if (event.persisted) {
+                forceTopRepeatedly();
+            }
+        });
+
+        if (isReloadNavigation) {
+            forceTopRepeatedly();
+        } else {
+            resetToHome();
+        }
+    };
+
     /* headerFixed
   -------------------------------------------------------------------------*/
     const headerFixed = () => {
@@ -2594,6 +2668,7 @@
 
     // Dom Ready
     $(function () {
+        forceBackToHomeOnReload();
         headerFixed();
         tabSlide();
         settings_color();
