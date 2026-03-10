@@ -1,24 +1,19 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Page Not Found</title>
-    <link rel="icon" type="image/x-icon" href="favicon.ico?v=20260307">
-    <script>
-        (function () {
-            var parts = window.location.pathname.split("/").filter(Boolean);
-            var target = "/";
-
-            if (window.location.hostname.endsWith(".github.io") && parts.length > 0) {
-                target = "/" + parts[0] + "/";
-            }
-
-            window.location.replace(target + window.location.search + window.location.hash);
-        })();
-    </script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Page Not Found</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico?v=20260307">
+  <script>
+    (() => {
+      const parts = location.pathname.split("/").filter(Boolean);
+      const base = location.hostname.endsWith(".github.io") && parts.length ? `/${parts[0]}/` : "/";
+      location.replace(base + location.search + location.hash);
+    })();
+  </script>
 </head>
 <body>
-    <p>Page not found. Continue to <a href="./">the portfolio site</a>.</p>
+  <p>Page not found. Continue to <a href="./">the portfolio site</a>.</p>
 </body>
 </html>

@@ -1993,6 +1993,23 @@ body.intro-locked .intro-center-title {
     saturate(var(--avatar-live-image-saturate)) !important;
   will-change: transform, filter;
 }
+.header-sidebar .box .avatar.avatar-no-ring.avatar-live-trail::before,
+.header-sidebar .box .avatar.avatar-no-ring.avatar-live-trail::after,
+.header-sidebar .box .avatar.avatar-no-ring.avatar-live-trail .avatar-link::before,
+.header-sidebar .box .avatar.avatar-no-ring.avatar-live-trail .avatar-link::after {
+  content: none !important;
+  opacity: 0 !important;
+}
+.header-sidebar .box .avatar.avatar-no-ring.avatar-live-trail .avatar-live-tail {
+  display: none !important;
+}
+.header-sidebar .box .avatar.avatar-no-ring.avatar-live-trail .avatar-link {
+  transform: none !important;
+}
+.header-sidebar .box .avatar.avatar-no-ring.avatar-live-trail .avatar-link img {
+  transform: scale(var(--avatar-live-image-scale, 0.9)) !important;
+  filter: none !important;
+}
 .header-avatar-ghost.avatar-no-ring.avatar-entrance-vfx::before {
   content: "";
   position: absolute;
@@ -6762,6 +6779,81 @@ body.project-video-modal-open {
   }
   .email-popup__title {
     font-size: 20px;
+  }
+}
+
+/* Skill marquee */
+.skills-marquee {
+  --marquee-gap: 40px;
+  --marquee-duration: 36s;
+  --marquee-logo-height: 30px;
+  position: relative;
+  overflow-x: hidden;
+  overflow-y: visible;
+  width: 100%;
+  max-width: 100%;
+  margin: 18px auto 26px;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+}
+.skills-marquee__track {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  animation: skillMarquee var(--marquee-duration) linear infinite;
+  will-change: transform;
+}
+.skills-marquee__group {
+  display: flex;
+  align-items: center;
+  gap: var(--marquee-gap);
+  padding-right: var(--marquee-gap);
+  flex: 0 0 auto;
+  min-width: max-content;
+}
+.skills-marquee img {
+  height: var(--marquee-logo-height);
+  width: auto;
+  display: block;
+  opacity: 0.78;
+  filter: grayscale(1) brightness(1.1);
+  transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease;
+}
+.skills-marquee img:hover,
+.skills-marquee img:focus-visible,
+.skills-marquee img:active {
+  opacity: 1;
+  filter: none;
+  transform: translateY(-3px);
+}
+@keyframes skillMarquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+@media (max-width: 767px) {
+  .skills-marquee {
+    --marquee-gap: 24px;
+    --marquee-duration: 30s;
+    --marquee-logo-height: 24px;
+    margin: 20px auto 30px;
+  }
+}
+@media (min-width: 1441px) {
+  .skills-marquee {
+    width: calc(100% - 80px);
+    max-width: calc(100% - 80px);
+    margin-left: 80px;
+    margin-right: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skills-marquee__track {
+    animation: none;
   }
 }
 
