@@ -126,6 +126,189 @@
         handleScroll();
     };
 
+    const handleSkillsMarqueeReveal = () => {
+        const marquee = document.querySelector(".skills-marquee--scroll");
+        if (!marquee) return;
+
+        let isVisible = false;
+        let observer = null;
+
+        const revealOnce = () => {
+            if (isVisible) return;
+            marquee.classList.add("is-visible");
+            if (document.body) {
+                document.body.classList.add("has-skills-marquee");
+            }
+            isVisible = true;
+            cleanup();
+        };
+        const onScrollReveal = () => {
+            if (isVisible) return;
+            const rect = marquee.getBoundingClientRect();
+            const viewportHeight =
+                window.innerHeight || document.documentElement.clientHeight;
+            if (rect.top < viewportHeight && rect.bottom > 0) {
+                revealOnce();
+            }
+        };
+        const cleanup = () => {
+            window.removeEventListener("scroll", onScrollReveal);
+            window.removeEventListener("resize", onScrollReveal);
+            if (observer) {
+                observer.disconnect();
+                observer = null;
+            }
+        };
+
+        marquee.classList.remove("is-visible");
+        marquee.style.marginTop = "";
+        if (document.body) {
+            document.body.classList.remove("has-skills-marquee");
+        }
+
+        if ("IntersectionObserver" in window) {
+            observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            revealOnce();
+                        }
+                    });
+                },
+                {
+                    root: null,
+                    threshold: 0.12,
+                }
+            );
+            observer.observe(marquee);
+        } else {
+            window.addEventListener("scroll", onScrollReveal, { passive: true });
+            window.addEventListener("resize", onScrollReveal);
+            onScrollReveal();
+        }
+    };
+
+    const handleResumeReveal = () => {
+        const resumeSection = document.querySelector("#resume");
+        if (!resumeSection) return;
+
+        const prefersReducedMotion = window.matchMedia(
+            "(prefers-reduced-motion: reduce)"
+        ).matches;
+
+        resumeSection.classList.add("resume-fade");
+
+        if (prefersReducedMotion) {
+            resumeSection.classList.add("is-visible");
+            return;
+        }
+
+        let revealed = false;
+        let observer = null;
+
+        const revealOnce = () => {
+            if (revealed) return;
+            resumeSection.classList.add("is-visible");
+            revealed = true;
+            cleanup();
+        };
+
+        const onScrollReveal = () => {
+            if (revealed) return;
+            const rect = resumeSection.getBoundingClientRect();
+            const viewportHeight =
+                window.innerHeight || document.documentElement.clientHeight;
+            if (rect.top < viewportHeight * 0.85 && rect.bottom > 0) {
+                revealOnce();
+            }
+        };
+
+        const cleanup = () => {
+            window.removeEventListener("scroll", onScrollReveal);
+            window.removeEventListener("resize", onScrollReveal);
+            if (observer) {
+                observer.disconnect();
+                observer = null;
+            }
+        };
+
+        if ("IntersectionObserver" in window) {
+            observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            revealOnce();
+                        }
+                    });
+                },
+                {
+                    root: null,
+                    threshold: 0.2,
+                }
+            );
+            observer.observe(resumeSection);
+        } else {
+            window.addEventListener("scroll", onScrollReveal, { passive: true });
+            window.addEventListener("resize", onScrollReveal);
+            onScrollReveal();
+        }
+    };
+
+    const syncUserBarCenter = () => {
+        const mainContent = document.querySelector(".main-content.style-fullwidth");
+        const aboutSection = document.querySelector("#about");
+        const userBar = document.querySelector(".user-bar");
+        if (!mainContent || !aboutSection || !userBar) return;
+
+        const updateCenterLine = () => {
+            const isDesktop = window.matchMedia("(min-width: 1150px)").matches;
+            const aboutRect = aboutSection.getBoundingClientRect();
+            if (!aboutRect.height) return;
+            if (!isDesktop) {
+                userBar.style.top = "";
+                return;
+            }
+            const centerLine = aboutRect.top + aboutRect.height / 2;
+            mainContent.style.setProperty("--about-center-line", `${centerLine}px`);
+            userBar.style.top = `${centerLine}px`;
+        };
+
+        let frameCount = 0;
+        const settle = () => {
+            updateCenterLine();
+            frameCount += 1;
+            if (frameCount < 6) {
+                requestAnimationFrame(settle);
+            }
+        };
+        requestAnimationFrame(settle);
+        window.addEventListener("resize", updateCenterLine);
+        window.addEventListener("load", updateCenterLine);
+
+        if ("ResizeObserver" in window) {
+            const observer = new ResizeObserver(() => {
+                updateCenterLine();
+            });
+            observer.observe(aboutSection);
+        }
+    };
+
+    const handleAboutOnlyAtTop = () => {
+        if (!document.body) return;
+
+        const update = () => {
+            const atTop = window.scrollY <= 0;
+            const hash = window.location.hash || "";
+            const isAboutHash = hash === "" || hash === "#about";
+            document.body.classList.toggle("about-only", atTop && isAboutHash);
+        };
+
+        update();
+        window.addEventListener("scroll", update, { passive: true });
+        window.addEventListener("load", update);
+        window.addEventListener("hashchange", update);
+    };
+
     /* Tab Slide 
   ------------------------------------------------------------------------------------- */
     var tabSlide = function () {
@@ -338,14 +521,14 @@
                 portfolioTag: "Portfolio",
                 portfolioHeading: "Featured Projects",
                 portfolioTags: [
-                    "Promotion Video",
                     "Animated Social Media Ads",
+                    "Promotion Video",
                     "Marketing Poster Series",
                     "Brand Identity & Visual Kit",
                 ],
                 portfolioCategories: [
-                    "VIDEO EDITING",
                     "MOTION GRAPHICS",
+                    "VIDEO EDITING",
                     "BRANDING DESIGN",
                     "GRAPHIC DESIGN",
                 ],
@@ -390,7 +573,7 @@
                 namePlaceholder: "Your name",
                 emailPlaceholder: "Your email",
                 messagePlaceholder: "Your Message...",
-                rights: "© 2026 Truong The Nhat. All rights reserved.",
+                rights: "© 2026 Truong The Nhat Portfolio. All rights reserved.",
                 settingsColor: "Color",
                 settingsBackground: "Background",
                 settingBackgroundNames: [
@@ -3851,6 +4034,8 @@
     $(function () {
         forceBackToHomeOnReload();
         headerFixed();
+        handleAboutOnlyAtTop();
+        syncUserBarCenter();
         tabSlide();
         settings_color();
         switchMode();
@@ -3860,10 +4045,12 @@
         handleEffectSpotlight();
         handleCounterTouchEffect();
         handleFeaturedProjectReveal();
+        handleResumeReveal();
         handlePortfolioPopupLinks();
         handleProjectVideoModal();
         handleQuickContactGlowEffect();
         handlePartnerLogoMask();
+        handleSkillsMarqueeReveal();
         preventDefault();
         spliting();
         runOrderedIntroSequence().catch((error) => {
