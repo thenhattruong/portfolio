@@ -18,75 +18,6 @@
 
     const hasIntroSequence = () => Boolean(document.querySelector(".counter-scroll"));
 
-    const applyPerformanceMode = () => {
-        if (!document.body) return;
-
-        const prefersReducedMotion = window.matchMedia(
-            "(prefers-reduced-motion: reduce)"
-        ).matches;
-
-        const addRootClass = (className) => {
-            document.body.classList.add(className);
-            if (document.documentElement) {
-                document.documentElement.classList.add(className);
-            }
-        };
-
-        if (prefersReducedMotion) {
-            addRootClass("reduce-motion");
-        }
-
-        const deviceMemory = navigator.deviceMemory || 0;
-        const cpuCores = navigator.hardwareConcurrency || 0;
-        const isLowEndDevice =
-            (deviceMemory && deviceMemory <= 4) ||
-            (cpuCores && cpuCores <= 4);
-
-        if (isLowEndDevice) {
-            addRootClass("low-power");
-            return;
-        }
-
-        if (
-            typeof performance === "undefined" ||
-            typeof performance.now !== "function" ||
-            typeof requestAnimationFrame !== "function"
-        ) {
-            return;
-        }
-
-        let frames = 0;
-        const start = performance.now();
-        const sampleDuration = 800;
-
-        const sample = (now) => {
-            frames += 1;
-            if (now - start < sampleDuration) {
-                requestAnimationFrame(sample);
-                return;
-            }
-            const fps = (frames * 1000) / Math.max(1, now - start);
-            if (fps < 50) {
-                addRootClass("low-power");
-            }
-        };
-
-        requestAnimationFrame(sample);
-    };
-
-    const isLowPowerMode = () => {
-        const body = document.body;
-        const root = document.documentElement;
-        return Boolean(
-            (body &&
-                (body.classList.contains("low-power") ||
-                    body.classList.contains("reduce-motion"))) ||
-            (root &&
-                (root.classList.contains("low-power") ||
-                    root.classList.contains("reduce-motion")))
-        );
-    };
-
     const setIntroLockState = (isLocked) => {
         if (!document.body || !hasIntroSequence()) return;
 
@@ -851,8 +782,6 @@
         const initAboutTitleMouseFollow = () => {
             const title = document.querySelector(aboutTitleSelector);
             if (!title || title.dataset.mouseFollowReady === "true") return;
-            if (isLowPowerMode()) return;
-
             let activeWord = null;
             let frameId = 0;
             let pointerX = 0;
@@ -1260,7 +1189,6 @@
   -------------------------------------------------------------------------*/
     const handleEffectSpotlight = () => {
         if (!$(".area-effect").length) return;
-        if (isLowPowerMode()) return;
         $(".area-effect").each(function() {
             const $container = $(this);
             const $spotlight = $container.find(".spotlight");
@@ -1282,8 +1210,6 @@
     const handleCounterTouchEffect = () => {
         const $touchItems = $(".counter-item, .portfolio-item");
         if (!$touchItems.length) return;
-        if (isLowPowerMode()) return;
-
         $touchItems.each(function() {
             const $item = $(this);
             const isPortfolioItem = $item.hasClass("portfolio-item");
@@ -3502,7 +3428,7 @@
             "(prefers-reduced-motion: reduce)"
         ).matches;
         const canHover = window.matchMedia("(hover: hover)").matches;
-        if (prefersReducedMotion || isLowPowerMode() || !canHover) return;
+        if (prefersReducedMotion || !canHover) return;
 
         avatar.dataset.liveTrailReady = "true";
         avatar.classList.add("avatar-live-trail");
@@ -4155,7 +4081,6 @@
 
     // Dom Ready
     $(function() {
-        applyPerformanceMode();
         forceBackToHomeOnReload();
         headerFixed();
         handleAboutOnlyAtTop();

@@ -1718,57 +1718,7 @@ body.intro-locked .intro-center-title {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  html:focus-within {
-    scroll-behavior: auto;
-  }
-
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    transition-delay: 0ms !important;
-  }
-}
-
-html.reduce-motion,
-html.low-power,
-body.reduce-motion,
-body.low-power {
-  scroll-behavior: auto;
-}
-
-body.reduce-motion *,
-body.reduce-motion *::before,
-body.reduce-motion *::after,
-body.low-power *,
-body.low-power *::before,
-body.low-power *::after {
-  animation-duration: 0.001ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0.001ms !important;
-  transition-delay: 0ms !important;
-}
-
-body.low-power * {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-body.low-power .body-overlay.video-overlay .bg-video {
-  display: none;
-}
-
-body.low-power .body-overlay .bg-shape::before,
-body.low-power .body-overlay .bg-shape::after {
-  display: none;
-}
-
-body.low-power .area-effect .spotlight {
-  opacity: 0;
-}
+@media (prefers-reduced-motion: reduce) {}
 
 @media (max-width: 1149px) {
   .header {
