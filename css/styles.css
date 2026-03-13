@@ -4367,9 +4367,9 @@ form textarea {
   width: 100%;
   z-index: 1;
   opacity: 0.3;
-  -webkit-mask: url("../images/item/bg-shape.svg") no-repeat center;
+  -webkit-mask: none;
   -webkit-mask-size: cover;
-  mask: url("../images/item/bg-shape.svg") no-repeat center;
+  mask: none;
   width: 100%;
   height: 100%;
   background: var(--Primary);
@@ -6369,7 +6369,7 @@ ANIMATION AREA CSS
 .partner-item {
   position: absolute;
   border-radius: 50%;
-  background: var(--Bg-linear-2);
+  background: transparent;
   width: max-content;
   overflow: hidden;
 }
@@ -6404,7 +6404,21 @@ ANIMATION AREA CSS
   -ms-transition: all 0.3s ease;
   -o-transition: all 0.3s ease;
   transition: all 0.3s ease;
-  padding: 24px;
+  padding: 5px;
+}
+
+.partner-item>img.partner-logo {
+  width: auto;
+  height: 64px;
+  object-fit: contain;
+  filter: grayscale(1) saturate(0.2);
+  opacity: 0.7;
+}
+
+/* Brand 4: sáng hơn một chút nhưng vẫn giữ hiệu ứng chuyển màu chung */
+.section-partner.style-2 .item-4 > img.partner-logo {
+  filter: grayscale(0.6) saturate(0.9) brightness(1.35);
+  opacity: 0.9;
 }
 
 .partner-item .item-shape {
@@ -6434,8 +6448,82 @@ ANIMATION AREA CSS
   animation: heartbeat-strong 2s infinite;
 }
 
+.partner-item:hover>img.partner-logo {
+  filter: grayscale(0) saturate(1);
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+
 .partner-item:hover .item-shape img {
   opacity: 1;
+}
+
+
+@media (min-width: 992px) {
+  .section-partner.style-2 .partner-marquee {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    margin-top: 18px;
+    --partner-cell: 104px;
+    --partner-col-gap: 40px;
+    --partner-row-gap: -4px;
+    --partner-marquee-duration: 15s;
+    --partner-marquee-shift: -33.333%;
+  }
+
+  .section-partner.style-2 .partner-marquee__track {
+    display: flex;
+    width: max-content;
+    animation: partner-marquee-rows var(--partner-marquee-duration) linear infinite;
+    will-change: transform;
+  }
+
+  .section-partner.style-2 .partner-marquee__group {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: var(--partner-cell);
+    grid-template-rows: repeat(3, var(--partner-cell));
+    column-gap: var(--partner-col-gap);
+    row-gap: var(--partner-row-gap);
+    padding-right: var(--partner-col-gap);
+    align-items: center;
+    justify-items: center;
+    flex: 0 0 auto;
+    min-width: max-content;
+  }
+
+  .section-partner.style-2 .partner-item {
+    position: relative;
+    width: var(--partner-cell);
+    height: var(--partner-cell);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .section-partner.style-2 .partner-item > img.partner-logo {
+    width: auto;
+    height: 40px;
+    padding: 0 !important;
+  }
+}
+
+@keyframes partner-marquee-rows {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(var(--partner-marquee-shift), 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-partner.style-2 .partner-marquee__track {
+    animation: none;
+    transform: none;
+  }
 }
 
 @media (max-width: 991px) {
@@ -6451,6 +6539,43 @@ ANIMATION AREA CSS
     height: 52px;
     width: 52px;
     padding: 0 !important;
+  }
+
+  .section-partner.style-2 .partner-marquee__track {
+    width: max-content;
+    animation: partner-marquee-rows var(--partner-marquee-duration) linear infinite;
+    will-change: transform;
+  }
+
+  .section-partner.style-2 .partner-marquee {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    margin-top: 14px;
+    --partner-cell: 88px;
+    --partner-col-gap: 4px;
+    --partner-row-gap: 0px;
+    --partner-marquee-duration: 24s;
+    --partner-marquee-shift: -33.333%;
+  }
+
+  .section-partner.style-2 .partner-marquee__group {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: var(--partner-cell);
+    grid-template-rows: repeat(3, var(--partner-cell));
+    column-gap: var(--partner-col-gap);
+    row-gap: var(--partner-row-gap);
+    padding-right: var(--partner-col-gap);
+    justify-items: center;
+    align-items: center;
+    flex: 0 0 auto;
+    min-width: max-content;
+  }
+
+  .section-partner.style-2 .partner-item {
+    width: var(--partner-cell);
+    height: var(--partner-cell);
   }
 }
 
@@ -7171,6 +7296,11 @@ ANIMATION AREA CSS
   .section-contact.style-1 .form-contact {
     margin-left: 35px;
     padding: 40px 60px;
+  }
+
+  .section-partner.style-2 .partner-marquee {
+    margin-left: 35px;
+    width: calc(100% - 35px);
   }
 }
 

@@ -480,7 +480,7 @@
 
         const pageContent = {
             en: {
-                pageTitle: "Truong The Nhat - Portfolio",
+                pageTitle: "Truong The Nhat",
                 profileRole: "Multimedia Design",
                 aboutTag: "About",
                 aboutIntroPrefix: "Hello! I'm",
@@ -594,7 +594,7 @@
                 ],
             },
             vi: {
-                pageTitle: "Truong The Nhat - Portfolio",
+                pageTitle: "Truong The Nhat",
                 profileRole: "Thiết kế Đa phương tiện",
                 aboutTag: "Giới thiệu",
                 aboutIntroPrefix: "Xin chào! Tôi là",
@@ -3783,6 +3783,47 @@
         });
     };
 
+    /* handlePartnerLogoLinks
+  -------------------------------------------------------------------------*/
+    const handlePartnerLogoLinks = () => {
+        const partnerItems = document.querySelectorAll(".section-partner.style-2 .partner-item");
+        if (!partnerItems.length) return;
+
+        const partnerLinks = {
+            "image.png": "https://rxglobal.de/",
+            "image copy.png": "https://www.servustv.com/",
+            "image copy 2.png": "https://www.wemod.com/fr",
+            "image copy 3.png": "https://www.suprcon.com/",
+            "image copy 4.png": "https://www.hellbrunn.at/",
+            "image copy 5.png": "https://www.wko.at/ooe",
+            "image copy 6.png": "https://www.ses-european.com/",
+            "image copy 7.png": "https://www.tiroler-versicherung.at/",
+            "image copy 8.png": "https://verdandi.at/",
+            "image copy 9.png": "https://www.joyfilmsme.com/",
+            "image copy 10.png": "https://www.spar.at/",
+            "image copy 11.png": "https://www.hervis.at/shop/",
+            "image copy 12.png": "https://www.monsterenergy.com/",
+            "image copy 13.png": "https://www.vietcombank.com.vn/",
+            "image copy 14.png": "https://mothquantum.com/"
+        };
+
+        partnerItems.forEach((item) => {
+            const logo = item.querySelector("img.partner-logo");
+            if (!logo) return;
+
+            const src = logo.getAttribute("src");
+            if (!src) return;
+
+            const fileName = decodeURIComponent(src.split("/").pop() || "");
+            const href = partnerLinks[fileName];
+            if (!href) return;
+
+            item.setAttribute("href", href);
+            item.setAttribute("target", "_blank");
+            item.setAttribute("rel", "noopener noreferrer");
+        });
+    };
+
     /* preventDefault
   -------------------------------------------------------------------------*/
     const preventDefault = () => {
@@ -4100,6 +4141,7 @@
         handleQuickContactReveal();
         handleQuickContactGlowEffect();
         handlePartnerLogoMask();
+        handlePartnerLogoLinks();
         handleSkillsMarqueeReveal();
         preventDefault();
         spliting();
