@@ -6899,10 +6899,20 @@ ANIMATION AREA CSS
   will-change: transform, opacity, filter;
 }
 
+.section-partner.style-2 .partner-marquee.partner-marquee-reveal .partner-marquee__track {
+  animation-play-state: paused;
+}
+
 .section-partner.style-2 .partner-marquee.partner-marquee-reveal.is-visible {
   opacity: 1;
   transform: translate3d(0, 0, 0) scale(1);
   filter: blur(0);
+}
+
+.section-partner.style-2
+  .partner-marquee.partner-marquee-reveal.is-visible
+  .partner-marquee__track {
+  animation-play-state: running;
 }
 
 @media (prefers-reduced-motion: reduce) {
