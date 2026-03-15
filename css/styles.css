@@ -8346,6 +8346,8 @@ body.project-video-modal-open {
   width: max-content;
   animation: skillMarquee var(--marquee-duration) linear infinite;
   will-change: transform;
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
 }
 
 .skills-marquee__group {
@@ -8355,6 +8357,7 @@ body.project-video-modal-open {
   padding-right: var(--marquee-gap);
   flex: 0 0 auto;
   min-width: max-content;
+  backface-visibility: hidden;
 }
 
 .skill-logo {
@@ -8362,6 +8365,7 @@ body.project-video-modal-open {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
 }
 
 .skill-tooltip {
@@ -8427,6 +8431,8 @@ body.project-video-modal-open {
   opacity: 0.78;
   filter: grayscale(1) brightness(1.1);
   transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 body:not(.dark-mode) .skills-marquee img.logo-github {
@@ -8447,13 +8453,19 @@ body:not(.dark-mode) .skills-marquee img.logo-github {
   transform: translateY(-3px);
 }
 
+.skills-marquee:hover .skills-marquee__track,
+.skills-marquee:focus-within .skills-marquee__track,
+.skills-marquee:active .skills-marquee__track {
+  animation-play-state: paused;
+}
+
 @keyframes skillMarquee {
   0% {
-    transform: translateX(0);
+    transform: translate3d(0, 0, 0);
   }
 
   100% {
-    transform: translateX(-50%);
+    transform: translate3d(-50%, 0, 0);
   }
 }
 
